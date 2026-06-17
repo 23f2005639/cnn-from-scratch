@@ -5,11 +5,11 @@ class Dense:
     def __init__(self, input_size, output_size):
         # small weights no gradient explosion
         self.weights = np.random.randn(input_size, output_size) * 0.01
-        self.bias = np.zeros((1, output_size))
+        self.biases = np.zeros((1, output_size))
 
     def forward(self, input_data):
         self.input = input_data  # falttened 1D vector
-        return np.dot(self.input, self.weights) + self.bias
+        return np.dot(self.input, self.weights) + self.biases
 
     def backward(self, output_gradient, learning_rate):
         # calculating gradient
@@ -18,7 +18,7 @@ class Dense:
 
         # updating parameters
         self.weights -= learning_rate * weights_gradient
-        self.bias -= learning_rate * np.sum(output_gradient, axis=0, keepdims=True)
+        self.biases -= learning_rate * np.sum(output_gradient, axis=0, keepdims=True)
 
         return input_gradient
 
@@ -101,4 +101,70 @@ class Conv:
         bias_gradient = np.sum(output_gradient, axis=(1, 2), keepdims=True)
 
         self.biases -= learning_rate * bias_gradient
+        return input_gradient
+
+
+class MaxPool:
+    def __init__(self, pool_size=2, stride=2):
+        self.pool_size = pool_size
+        self.stride = stride
+
+    def forward(self, input_data):
+        self.input = input_data
+
+        depth, height, width = input_data.shape
+
+        out_height = (height - self.pool_size) // self.stride + 1
+        out_width = (width - self.pool_size) // self.stride + 1
+
+        self.output_shape = (depth, out_height, out_width)
+
+        output = np.zeros(self.output_shape)
+
+        for d in range(depth):
+            for row in range(out_height):
+                for col in range(out_width):
+                    start_y = row * self.stride
+                    start_x = col * self.stride
+
+                    # taking current window
+                    patch = input_data[
+                        d,
+                        start_y : start_y + self.pool_size,
+                        start_x : start_x + self.pool_size,
+                    ]
+
+                    output[d, row, col] = np.max(patch)
+
+        return output
+
+    def backward(self, output_gradient):
+        input_gradient = np.zeros_like(self.input)
+
+        depth, out_height, out_width = self.output_shape
+
+        for d in range(depth):
+            for row in range(out_height):
+                for col in range(out_width):
+                    start_y = row * self.stride
+                    start_x = col * self.stride
+
+                    patch = self.input[
+                        d,
+                        start_y : start_y + self.pool_size,
+                        start_x : start_x + self.pool_size,
+                    ]
+
+                    max_val = np.max(patch)
+
+                    # gradient only goes to max value position
+                    for i in range(self.pool_size):
+                        for j in range(self.pool_size):
+                            if patch[i, j] == max_val:
+                                input_gradient[
+                                    d,
+                                    start_y + i,
+                                    start_x + j,
+                                ] += output_gradient[d, row, col]
+
         return input_gradient
