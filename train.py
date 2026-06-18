@@ -64,7 +64,7 @@ class Adam:
 def main():
     # Training Hyperparameters
     TRAIN_SIZE = 20000
-    EPOCHS = 4
+    EPOCHS = 5
     LEARNING_RATE = 0.001
     LR_DECAY = 0.7
     WEIGHT_DECAY = 1e-4
@@ -153,6 +153,15 @@ def main():
         print(f"epoch {epoch+1} finished in {time.time()-t0:.1f}s. Loss={loss_val/TRAIN_SIZE:.4f}, train acc={train_acc:.2f}%, test acc={test_acc:.2f}%")
         
         opt.lr *= LR_DECAY
+
+    # save trained weights
+    print("saving trained weights...")
+    np.savez_compressed("model_weights.npz", 
+                        conv_kernels=conv.kernels, 
+                        conv_biases=conv.biases,
+                        dense_weights=dense.weights, 
+                        dense_biases=dense.biases)
+    print("model saved to model_weights.npz")
 
 
 if __name__ == "__main__":
